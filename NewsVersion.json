@@ -1,9 +1,9 @@
 {
     "version": "0.1.12.2",
-    "updateurl": "https://kvisk.net/download/[LUA] ARZ News by Kvisk.lua",
+    "updateurl": "https://raw.githubusercontent.com/Kvisk/LuaARZNewsHelper/main/[LUA] ARZ News by Kvisk.lua",
     "telemetry": "https://kvisk.net/news",
     "description": {
-        "heading": "Исправлены очепятки",
-        "line": " - С любовью от Кита."
+        "heading": "Обновление тестовое",
+        "line": " - Резервный сервер."
     }
 }
