@@ -1,5 +1,5 @@
 script_name('Arizona News Helper')
-script_version('0.1.11')
+script_version('0.1.12')
 script_description('Хелпер для News')
 script_author('kvisk')
 
