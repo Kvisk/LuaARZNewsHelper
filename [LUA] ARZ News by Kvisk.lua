@@ -1,9 +1,8 @@
 script_name('Arizona News Helper')
-script_version('0.1.11')
+script_version('0.1.11.2')
 script_description('Хелпер для News')
 script_author('kvisk')
 
---require 'lib.moonloader'
 local memory = require 'memory'
 local bit = require 'bit'
 local ev =  require 'samp.events'
@@ -76,21 +75,21 @@ function main()
 	end)
 
 	sampAddChatMessage(tag .. u8:decode('/nh, /newshelp'), -1)
-
+	
 	while true do
-		wait(0)
+		wait(10)
 
 		if wasKeyPressed(setup.keys.catchAd[2] or setup.keys.catchAd[1]) then
 			lua_thread.create(function ()
 				while isKeyDown(setup.keys.catchAd[2] or setup.keys.catchAd[1]) do
 					if not ((sampIsDialogActive() and u8:encode(sampGetDialogCaption()) == '{BFBBBA}Редакция') or not sampIsDialogActive()) then break end
 					sampSendChat('/newsredak')
-					wait(210) -- ДОБАВИТЬ ПИНГ
+					wait(110 + sampGetPlayerPing(select(2,sampGetPlayerIdByCharHandle(PLAYER_PED))))
 				end
 			end)
 		end
 		
-		if sampIsDialogActive() and u8:encode(sampGetDialogCaption()) == '{BFBBBA}Редактирование' then -- Есть недороботки
+		if sampIsDialogActive() and u8:encode(sampGetDialogCaption()) == '{BFBBBA}Редактирование' then
 			if tAd[1] == nil then ------ Переделать
 				sampSetCurrentDialogEditboxText(u8:decode(tAd[2]))
 				tAd[1] = false
@@ -100,7 +99,7 @@ function main()
 				tAd[3] = false
 			end -----
 
-			if wasKeyPressed(setup.keys.copyAd[1]) then
+			if wasKeyPressed(setup.keys.copyAd[2] or setup.keys.copyAd[1]) then
 				if u8:encode(sampGetDialogText()):find('Сообщение:%s+{33AA33}.+\n\n') then
 					local textdown = u8:encode(sampGetDialogText()):match('Сообщение:%s+{33AA33}(.+)\n\n')
 					sampSetCurrentDialogEditboxText(u8:decode(textdown))
@@ -239,7 +238,7 @@ imgui.OnFrame(function() return rHelp[0] end,
 							imgui.SameLine()
 						else tSize = TextSize+10 end
 						if imgui.Button(helbincfg[i][f][1]..'##if'..i..f, imgui.ImVec2(TextSize, 20)) then
-							if helbincfg[i][f][2]:find('*') then -- новое временное решение, что бы стирать '*'
+							if helbincfg[i][f][2]:find('*') then
 								sampSetCurrentDialogEditboxText(u8:decode(tostring(helbincfg[i][f][2]:gsub('*', ''))))
 								setDialogCursorPos(utf8len(helbincfg[i][f][2]:match('(.-)*')))
 							else
@@ -262,7 +261,7 @@ imgui.OnFrame(function() return rSW[0] end,
 		elseif winSet[1] == 2 then
 			imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
 			imgui.SetNextWindowSizeConstraints(imgui.ImVec2(700, 400), imgui.ImVec2(800, 500))
-			imgui.Begin('Написать разработчику ##window_3', rSW, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize) -- imgui.TabBarFlags.NoCloseWithMiddleMouseButton
+			imgui.Begin('Написать разработчику ##window_3', rSW, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.AlwaysAutoResize)
 				imgui.InputTextMultiline(id_name .. 'input_7', inputDec, sizeof(inputDec) - 1, imgui.ImVec2(imgui.GetWindowWidth() - 16, imgui.GetWindowHeight() - 66))
 				imgui.Tooltip('Укажите контакты для связи, если вам нужен ответ!')
 				imgui.SetCursorPosX(imgui.GetWindowWidth() / 2 - 50)
@@ -284,8 +283,7 @@ imgui.OnFrame(function() return rSW[0] end,
 imgui.OnFrame(function() return rFastM[0] end,
 	function(player)
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 1.1, sizeY / 1.2), imgui.Cond.FirstUseEver, imgui.ImVec2(1, 1))
-		imgui.SetNextWindowSize(imgui.ImVec2(500, 300), imgui.Cond.FirstUseEver + imgui.WindowFlags.NoResize) -- + imgui.WindowFlags.NoResize
-		--imgui.SetNextWindowSizeConstraints(imgui.ImVec2(700, 400), imgui.ImVec2(700, 400))
+		imgui.SetNextWindowSize(imgui.ImVec2(500, 300), imgui.Cond.FirstUseEver + imgui.WindowFlags.NoResize)
 		imgui.Begin('Меню быстрого доступа ##window_4', rFastM, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollWithMouse + imgui.WindowFlags.NoScrollbar --[[+ imgui.WindowFlags.NoTitleBar]]) -- + imgui.WindowFlags.AlwaysAutoResize imgui.TabBarFlags.NoCloseWithMiddleMouseButton
 			imgui.SetCursorPosY(19)
 			imgui.BeginChild(id_name .. 'child_window_6', imgui.ImVec2((imgui.GetWindowWidth() - wPaddX*2) / 1.7, imgui.GetWindowHeight() - 2 - wPaddY*2), false)
@@ -471,9 +469,6 @@ function imgui.SameTable(id, tag, func)
 		tmp.selId = nil
 		if imgui.IsMouseDoubleClicked(0) then
 			setVirtualKeyDown(0x01, false)
-			--func()
-		else
-			--
 		end
 	end
 	imgui.SameLine(0)
@@ -502,13 +497,11 @@ function imgui.SameTable(id, tag, func)
 			imgui.TextCenter('{STANDART}{ffa64d99}Объявление которое пришло в редакцию на проверку')
 			imgui.PushItemWidth(555)
 			imgui.InputText(id_name .. 'input_1', inputAd, sizeof(inputAd) - 1)
-			--imgui.PopItemWidth()
 
 			imgui.NewLine()
 			imgui.TextCenter('{STANDART}{66ffb399}Сохраненное объявление после вашего редактирования')
 			imgui.PushItemWidth(555)
 			imgui.InputText(id_name .. 'input_2', inputAdText, sizeof(inputAdText) - 1)
-			--imgui.PopItemWidth()
 
 			imgui.NewLine()
 			imgui.SetCursorPosX(82.5)
@@ -590,7 +583,7 @@ function imgui.RenderText(text)
 end
 function imgui.RenderButtonEf(array, tagConcept, func)
 	local tagConcept = tagConcept or {}
-	local tagEvents = {{'tag', esterscfg.events[array.name].tag, ''}}
+	local tagEvents = {{'tag', esterscfg.events[array.name].tag, '', '', 'Тег которвый вы можете изменить\nсправо. (Можно просто очистить)'}}
 	tagConcept[#tagConcept+1] = tagEvents[1]
 	local cycleEsters = function (arr, t)
 		local t = t or false
@@ -691,7 +684,7 @@ function imgui.RenderButtonEf(array, tagConcept, func)
 end
 function imgui.EditingTableEf(arrBtn, arrTag, arrName, i)
 	local i = i or 0
-	if imgui.BeginPopupModal(id_name..'popup_modal_FF_'..arrBtn[1], nil, imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then --imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize 
+	if imgui.BeginPopupModal(id_name..'popup_modal_FF_'..arrBtn[1], nil, imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
 		imgui.TextCenter('{66ffb399}Редактирование текста для эфира, кнопка {ffa64d99}"'..arrBtn[1]:gsub('\n', ' '):gsub('[%s]+', ' '):gsub('^%s', '')..'"')
 		imgui.Separator()
 		if esterscfg.events[arrName].tag or i == 0 then
@@ -702,7 +695,7 @@ function imgui.EditingTableEf(arrBtn, arrTag, arrName, i)
 					imgui.TextEnd('{a8a8a899}*наведи')
 					imgui.Tooltip('Наведи на один из тегов!')
 				end
-
+				
 				imgui.SetCursorPosY(imgui.GetCursorPosY() + 7)
 				local butTags = pushArrS(arrTag)
 				local divider = (math.fmod(#butTags, 2) == 0 and math.floor(#butTags / 2) or math.floor(#butTags / 2) + 1)
@@ -710,8 +703,10 @@ function imgui.EditingTableEf(arrBtn, arrTag, arrName, i)
 				for k=1, #butTags do
 					imgui.SetColumnWidth(-1, imgui.GetWindowWidth() / divider)
 					local textTag = '{'..butTags[k][1]..'}'
-					imgui.Selectable(id_name..'selectable_'..k, nil) 
-					imgui.Tooltip(''..regexTag(textTag, arrTag))
+					if imgui.Selectable(id_name..'selectable_'..k, nil) then
+						setClipboardText(textTag)
+					end
+					imgui.Tooltip((butTags[k][5] or '') .. '\nТекст: "'..regexTag(textTag, arrTag)..'"\n\nНажми чтобы скопировать тег!')
 					imgui.SameLine(-1)
 					imgui.SetCursorPosX(imgui.GetCursorPos().x - 6 + ((imgui.GetWindowWidth() / divider) / 2 - imgui.CalcTextSize(textTag).x / 2))
 					imgui.Text(textTag)
@@ -753,21 +748,56 @@ function imgui.EditingTableEf(arrBtn, arrTag, arrName, i)
 			imgui.SetCursorPosY(imgui.GetCursorPos().y + 4)
 		end
 
-		imgui.BeginChild(id_name..'child_window_t_3', imgui.ImVec2((imgui.GetWindowWidth() - 15), imgui.GetWindowHeight() - imgui.GetCursorPos().y - 39), false)
+		imgui.BeginChild(id_name..'child_window_t_3', imgui.ImVec2((imgui.GetWindowWidth() - 15), imgui.GetWindowHeight() - imgui.GetCursorPos().y - 39), false, imgui.WindowFlags.HorizontalScrollbar)
 			arrBtn = tmp.EvaArrBtn or arrBtn
 			if i ~= 0 then
-				imgui.StrCopy(iptEv, select(2, pcall(function ()
-					local textL = ''
-					for k=2, #arrBtn do textL = textL..(tmp.varEvIptMulti and regexTag(arrBtn[k], arrTag) or arrBtn[k])..'\n' end
-					return textL			
-				end)))
-				if imgui.InputTextMultiline(id_name..'inputMulti_1', iptEv, sizeof(iptEv) - 1, imgui.ImVec2(imgui.GetWindowWidth(), imgui.GetWindowHeight()), (tmp.varEvIptMulti and imgui.InputTextFlags.ReadOnly or 0)) then
+				local stPos = {['x'] = imgui.GetCursorScreenPos().x, ['y'] = imgui.GetCursorScreenPos().y + 5}
+				local Drawlist = imgui.GetWindowDrawList()
+				local mW = 0  
+				local posTags = {}
+				local textL = ''
+				for k=2, #arrBtn do 
+					if tmp.varEvIptMulti then
+						local tTxt = regexTag(arrBtn[k], arrTag)
+						local sTxt = imgui.CalcTextSize(tTxt).x
+						mW = (mW < sTxt and sTxt or mW)
+						textL = textL..tTxt..'\n'
+					else
+						textL = textL..arrBtn[k]..'\n'
+						local sTxt = imgui.CalcTextSize(arrBtn[k]).x
+						mW = (mW < sTxt and sTxt or mW)
+						for _, t in ipairs(pushArrS(arrTag)) do
+							local num = arrBtn[k]:find('{'..t[1]..'}')
+							while num do
+								table.insert(posTags, {['x'] = imgui.CalcTextSize(arrBtn[k]:sub(1, num)).x - 1.1, ['y'] = (k-2)*14, ['w'] = imgui.CalcTextSize('{'..t[1]..'}').x - 1.2, ['t'] = '{'..t[1]..'}'}) 
+								local stNum = arrBtn[k]:sub(1, num)
+								num = arrBtn[k]:sub(num + 1 + #t[1]):find('{'..t[1]..'}')
+								if num then num = num + #stNum + #t[1] end
+							end
+						end
+					end
+				end
+
+				for _, pos in ipairs(posTags) do
+					imgui.SetCursorPos(imgui.ImVec2(pos.x, pos.y + 3))
+					imgui.Text(pos.t)
+					imgui.Tooltip(''..regexTag(pos.t, arrTag))
+				end
+
+				imgui.StrCopy(iptEv, textL)
+				imgui.SetCursorPos(imgui.ImVec2(0, 0))
+				if imgui.InputTextMultiline(id_name..'inputMulti_1', iptEv, sizeof(iptEv) - 1, imgui.ImVec2((mW+30 > imgui.GetWindowWidth() and mW+30 or imgui.GetWindowWidth()) - (15*(#arrBtn+2) > imgui.GetWindowHeight() and 10 or 0), (15*(#arrBtn+2) > imgui.GetWindowHeight() and 15*(#arrBtn+2) or imgui.GetWindowHeight())), (tmp.varEvIptMulti and imgui.InputTextFlags.ReadOnly or 0) + imgui.InputTextFlags.NoHorizontalScroll + (esterscfg.events[arrName].tag and imgui.InputTextFlags.CallbackAlways or 0), callbacks.bindtag) then
 					local arrL = {arrBtn[1]}
 					for search in string.gmatch(str(iptEv), '[^%c]+') do
 						arrL[#arrL+1] = search
 					end
 					tmp.EvaArrBtn = arrL
 				end
+
+				for _, pos in ipairs(posTags) do
+					Drawlist:AddRectFilled(imgui.ImVec2(stPos.x + pos.x, stPos.y + pos.y), imgui.ImVec2(stPos.x + pos.x + pos.w, stPos.y + pos.y + 13), 0x490eb52a, 4, 15)
+				end
+
 			else
 				imgui.StrCopy(iptEv, (tmp.varEvIptMulti and regexTag(arrBtn[2], arrTag) or arrBtn[2]))
 				imgui.PushItemWidth(imgui.GetWindowWidth())
@@ -903,7 +933,6 @@ function imgui.LocalSettings() -- Подраздел Редакции
 	elseif buttonPages[3] then imgui.AutoBindButton() end
 end
 function imgui.Advertisement() -- раздел ред. Объявления
-	--imgui.TextCenter('{ABBDDDAA}Редактирование сохранённых объявлений')
 	imgui.StrCopy(inputReplace, tmp.field and tmp.field or '')
 	imgui.SetCursorPosX(6)
 	imgui.PushItemWidth(imgui.GetWindowWidth() - 94)
@@ -989,7 +1018,6 @@ function imgui.Advertisement() -- раздел ред. Объявления
 	imgui.EndChild()
 end
 function imgui.AutoBind() -- раздел ред. Автозамена
-	--imgui.TextCenter('{ABBDDDAA}Настройка Автозамены')
 	imgui.BeginChild(id_name..'child_window_5', imgui.ImVec2(imgui.GetWindowWidth() - 12, imgui.GetWindowHeight() - 40), false)
 		imgui.TextStart('{ffff99BB}Специальный символ')
 		imgui.SameLine()
@@ -1037,7 +1065,6 @@ function imgui.AutoBind() -- раздел ред. Автозамена
 		
 		imgui.TextCenter('{F9FFFF88}Микрокоманды для автозамены')
 		imgui.BeginChild(id_name..'child_6', imgui.ImVec2(imgui.GetWindowWidth(), imgui.GetWindowHeight() - 42))
-			--local spike = false
 			local centSize = (imgui.GetWindowWidth() - (math.floor((imgui.GetWindowWidth() + 6) / 270) * 270 - 6)) / 2
 			imgui.SetCursorPosX(centSize)
 			for i=2, #autbincfg*2-1 do
@@ -1282,7 +1309,7 @@ function imgui.Mathematics() -- раздел мер. эфир. Математи�
 			iptTmp.iptID = str(iptID)
 			tmp.evNick = nil
 			if tonumber(str(iptID)) and sampIsPlayerConnected(str(iptID)) then
-				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' ')
+				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' '):gsub('^%[%d%d?%]', '')
 			end
 		end
 		imgui.SameLine()
@@ -1327,10 +1354,10 @@ function imgui.Mathematics() -- раздел мер. эфир. Математи�
 		end
 
 		imgui.RenderButtonEf(esterscfg.events.mathem, {
-			{'prize', iptTmp.iptPrz or '1 млн', '1 млн', 'У вас не указанна {fead00}награда{C0C0C0} за данный эфир!'},
-			{'scores', iptTmp.iptScr or '5', '3', 'У вас не указанно сколько {fead00}раундов{C0C0C0} будет в эфире!'},
-			{'scoreID', iptTmp.iptScrId, '2', 'У вас не указанно сколько {fead00}баллов{C0C0C0} у человека!'},
-			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID{C0C0C0} человека!'}
+			{'prize', iptTmp.iptPrz or '1 млн', '1 млн', 'У вас не указанна {fead00}награда{C0C0C0} за данный эфир!', 'Награда за эфир'},
+			{'scores', iptTmp.iptScr or '5', '3', 'У вас не указанно сколько {fead00}раундов{C0C0C0} будет в эфире!', 'Количество раундов'},
+			{'scoreID', iptTmp.iptScrId, '2', 'У вас не указанно сколько {fead00}баллов{C0C0C0} у человека!', 'Количество баллов у человека'},
+			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID{C0C0C0} человека!', 'Имя человека'}
 		})
 	imgui.EndChild()
 
@@ -1384,7 +1411,7 @@ function imgui.ChemicElements() -- раздел мер. эфир. Химичес
 			iptTmp.iptID = str(iptID)
 			tmp.evNick = nil
 			if tonumber(str(iptID)) and sampIsPlayerConnected(str(iptID)) then
-				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' ')
+				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' '):gsub('^%[%d%d?%]', '')
 			end
 		end
 		imgui.SameLine()
@@ -1429,10 +1456,10 @@ function imgui.ChemicElements() -- раздел мер. эфир. Химичес
 		end
 
 		imgui.RenderButtonEf(esterscfg.events.chemic, {
-			{'prize', iptTmp.iptPrz or '1 млн', '1 млн', 'У вас не указанна {fead00}награда{C0C0C0} за данный эфир!'},
-			{'scores', iptTmp.iptScr or '5', '3', 'У вас не указанно сколько {fead00}раундов{C0C0C0} будет в эфире!'},
-			{'scoreID', iptTmp.iptScrId, '2', 'У вас не указанно сколько {fead00}баллов{C0C0C0} у человека!'},
-			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID{C0C0C0} человека!'}
+			{'prize', iptTmp.iptPrz or '1 млн', '1 млн', 'У вас не указанна {fead00}награда{C0C0C0} за данный эфир!', 'Награда за эфир'},
+			{'scores', iptTmp.iptScr or '5', '3', 'У вас не указанно сколько {fead00}раундов{C0C0C0} будет в эфире!', 'Количество раундов'},
+			{'scoreID', iptTmp.iptScrId, '2', 'У вас не указанно сколько {fead00}баллов{C0C0C0} у человека!', 'Количество баллов у человека'},
+			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID{C0C0C0} человека!', 'Имя человека'}
 		})
 	imgui.EndChild()
 
@@ -1474,7 +1501,7 @@ function imgui.Greetings() -- раздел мер. эфир. Приветы
 			iptTmp.iptID = str(iptID)
 			tmp.evNick = nil
 			if tonumber(str(iptID)) and sampIsPlayerConnected(str(iptID)) then
-				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' ')
+				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' '):gsub('^%[%d%d?%]', '')
 			end
 		end
 		imgui.SameLine()
@@ -1502,7 +1529,7 @@ function imgui.Greetings() -- раздел мер. эфир. Приветы
 			iptTmp.iptToId = str(iptToId)
 			tmp.evNick2 = nil
 			if tonumber(str(iptToId)) and sampIsPlayerConnected(str(iptToId)) then
-				tmp.evNick2 = sampGetPlayerNickname(str(iptToId)):gsub('_', ' ')
+				tmp.evNick2 = sampGetPlayerNickname(str(iptToId)):gsub('_', ' '):gsub('^%[%d%d?%]', '')
 			end
 		end
 		imgui.SameLine()
@@ -1510,9 +1537,9 @@ function imgui.Greetings() -- раздел мер. эфир. Приветы
 		imgui.Tooltip('ID человека, который получает привет')
 
 		imgui.RenderButtonEf(esterscfg.events.greet, {
-			{'time', iptTmp.iptTime or '15', '30', 'У вас не указанно сколько {fead00}времени{C0C0C0} будет этот эфир!'},
-			{'toID', tmp.evNick2, 'Sharky Flint', 'У вас не указанно {fead00}ID кому{C0C0C0} передают привет!'},
-			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID кто{C0C0C0} передает привет!'}
+			{'time', iptTmp.iptTime or '15', '30', 'У вас не указанно сколько {fead00}времени{C0C0C0} будет этот эфир!', 'Время длительности эфира'},
+			{'toID', tmp.evNick2, 'Sharky Flint', 'У вас не указанно {fead00}ID кому{C0C0C0} передают привет!', 'Имя КОМУ передают привет'},
+			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID кто{C0C0C0} передает привет!', 'Имя КТО передает привет'}
 		}, {
 			{'Передать привет', true, function (txt, tCon)
 				for i, lTags in ipairs(tCon) do
@@ -1524,8 +1551,10 @@ function imgui.Greetings() -- раздел мер. эфир. Приветы
 					end
 					tCon[i] = lTags
 				end
+				local chTxt = regexTag(txt[2], tCon)
 				sampSetChatInputEnabled(true)
-				sampSetChatInputText(u8:decode(regexTag(txt[2], tCon)))
+				sampSetChatInputText(u8:decode(''..chTxt:gsub('%*', '', 1)))
+				if chTxt:find('%*') then setChatCursorPos(utf8len(chTxt:match('(.-)%*'))) end
 			end}
 		})
 	imgui.EndChild()
@@ -1546,7 +1575,7 @@ function imgui.ToHide() -- раздел мер. эфир. Прятки
 			iptTmp.iptID = str(iptID)
 			tmp.evNick = nil
 			if tonumber(str(iptID)) and sampIsPlayerConnected(str(iptID)) then
-				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' ')
+				tmp.evNick = sampGetPlayerNickname(str(iptID)):gsub('_', ' '):gsub('^%[%d%d?%]', '')
 			end
 		end
 		imgui.SameLine()
@@ -1591,10 +1620,10 @@ function imgui.ToHide() -- раздел мер. эфир. Прятки
 		end
 
 		imgui.RenderButtonEf(esterscfg.events.tohide, {
-			{'prize', iptTmp.iptPrz or '1 млн', '1 млн', 'У вас не указанна {fead00}награда{C0C0C0} за данный эфир!'},
-			{'time', iptTmp.iptTime or '50', '40', 'У вас не указанно сколько {fead00}времени{C0C0C0} будет этот эфир!'},
-			{'phrase', tmp.iptPhrase, 'Вкусная клубника', 'У вас не указанна {fead00}фраза{C0C0C0} которую нужно сказать!'},
-			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID{C0C0C0} человека!'}
+			{'prize', iptTmp.iptPrz or '1 млн', '1 млн', 'У вас не указанна {fead00}награда{C0C0C0} за данный эфир!', 'Награда за эфир'},
+			{'time', iptTmp.iptTime or '50', '40', 'У вас не указанно сколько {fead00}времени{C0C0C0} будет этот эфир!', 'Длительность эфира'},
+			{'phrase', tmp.iptPhrase, 'Вкусная клубника', 'У вас не указанна {fead00}фраза{C0C0C0} которую нужно сказать!', 'Фраза которую нужно озвучить'},
+			{'ID', tmp.evNick, 'Rudius Greyrat', 'У вас не указан {fead00}ID{C0C0C0} человека!', 'Имя человека'}
 		})
 	imgui.EndChild()
 
@@ -1677,7 +1706,7 @@ function imgui.FmInterviews()
 			sampSendChat(u8:decode('Хорошо, покажите ваши документы. А именно паспорт, лицензии и мед. карту.'))
 			wait(1000)
 			local myId = select(2,sampGetPlayerIdByCharHandle(PLAYER_PED))
-			sampSendChat(u8:decode(string.format('/b /showpass %s | /showlic %s | /showmc %s', myId, myId, myId))) -- "ID" заменить на свой
+			sampSendChat(u8:decode(string.format('/b /showpass %s | /showlic %s | /showmc %s', myId, myId, myId)))
 		end},
 		{'Проверка документов', function ()
 			if sampIsDialogActive() then 
@@ -2128,10 +2157,15 @@ function setDialogCursorPos(pos)
     memory.setuint8(m_pEditbox + 0x119, pos, true)
     memory.setuint8(m_pEditbox + 0x11E, pos, true)
 end
+function setChatCursorPos(pos)
+    local pEditBox = memory.getuint32(sampGetInputInfoPtr() + 0x08, true)
+    memory.setuint8(pEditBox + 0x119, pos, true)
+    memory.setuint8(pEditBox + 0x11E, pos, true)
+end
 function pushArrS(arr)
 	local arr = decodeJson(encodeJson(arr)) or {}
 	for i, name in ipairs(nHelpEsterSet[1]) do
-		table.insert(arr, {name, esterscfg.settings[name], nHelpEsterSet[3][i], 'В настройках отсутствует {fead00}'..nHelpEsterSet[2][i]..'{C0C0C0} что-бы использовать в эфире!'})
+		table.insert(arr, {name, esterscfg.settings[name], nHelpEsterSet[3][i], 'В настройках отсутствует {fead00}'..nHelpEsterSet[2][i]..'{C0C0C0} что-бы использовать в эфире!', nHelpEsterSet[4][i]})
 	end
 	return arr
 end
@@ -2295,7 +2329,6 @@ function Style()
 	colors[clr.Border] = ImVec4(0.30, 0.35, 0.39, 1)
 end
 
-
 -- ================== Объёмные переменные ======================== --
 function loadVar()
 	thUpd = {
@@ -2303,7 +2336,16 @@ function loadVar()
 		['tr'] = false,
 		['inf'] = '',
 		{ -- {STANDART}
-			{['version'] = '0.1.11 alpha', {
+			{['version'] = '0.1.11.2 alpha', {
+				' - Добавлена визуализация тегов (в меню редактирования',
+				'   эфиров) и более подробная информация о них',
+				' - Фикс имен в эфирах, на вайсити теперь ники без серверов',
+				' - Добавлены ларцы в разное, исправлено некоторое описание',
+				'   в меню помощи (Delete)',
+				' - Откорректирована работа "Редактора объявлений", теперь',
+				'   флуда не должно быть. (Можно зажимать клавишу)'
+				}
+			},{['version'] = '0.1.11 alpha', {
 				' - Добавлена возможность создавать и редактировать',
 				'   кнопочные - бинды. В разделе Редакция.',
 				' - Исправленна баг с использованием регулярных символов',
@@ -2539,22 +2581,22 @@ function loadVar()
 			{'Куплю м/д ','Куплю модификацию "" для а/м "". Бюджет:'},
 			{'Продам м/д ','Продам модификацию "" для а/м "". Цена:'}
 		},{'Покупка/продажа видеокарт, смазки и охлада',
-			{'Продам видеокарту BTC', 'Продам видеокарту "Bitcoin". Цена: '},
-			{'Куплю видеокарту BTC', 'Куплю видеокарту "Bitcoin". Бюджет: '},
-			{'Продам видеокарту поколение BTC', 'Продам видеокарту "Bitcoin" * поколения. Цена: '},
-			{'Куплю видеокарту поколение BTC', 'Куплю видеокарту "Bitcoin" * поколения. Бюджет: '},
-			{'Продам видеокарту ARZ', 'Продам видеокарту "Arizona SC". Цена: '},
-			{'Куплю видеокарту ARZ', 'Куплю видеокарту "Arizona SC". Бюджет: '},
-			{'Продам видеокарту ARZ поколение', 'Продам видеокарту "Arizona SC" * поколения. Цена: '},
-			{'Куплю видеокарту ARZ поколение', 'Куплю видеокарту "Arizona SC" * поколения. Бюджет: '},
-			{'Продам охлад BTC', 'Продам охлаждающую жидкость для видеокарты "Bitcoin". Цена: '},
-			{'Куплю охлад BTC', 'Куплю охлаждающую жидкость для видеокарты "Bitcoin". Бюджет: '},
-			{'Продам смазку BTC', 'Продам смазки для разгона видеокарты "Bitcoin". Цена: '},
-			{'Куплю смазку BTC', 'Куплю смазки для разгона видеокарты "Bitcoin". Бюджет: '},
-			{'Продам охлад для ARZ', 'Продам охлаждающую жидкость для видеокарты "Arizona SC". Цена: '},
-			{'Куплю охлад для ARZ', 'Куплю охлаждающую жидкость для видеокарты "Arizona SC". Бюджет: '},
-			{'Продам смазку для ARZ', 'Продам смазку для разгона видеокарты "Arizona SC". Цена: '},
-			{'Куплю смазку для ARZ', 'Куплю смазку для разгона видеокарты "Arizona SC". Бюджет: '},	
+			{'Продам видеокарту BTC', 'Продам видеокарту "BTC". Цена: '},
+			{'Куплю видеокарту BTC', 'Куплю видеокарту "BTC". Бюджет: '},
+			{'Продам видеокарту поколение BTC', 'Продам видеокарту "BTC" * поколения. Цена: '},
+			{'Куплю видеокарту поколение BTC', 'Куплю видеокарту "BTC" * поколения. Бюджет: '},
+			{'Продам видеокарту ARZ', 'Продам видеокарту "ASC". Цена: '},
+			{'Куплю видеокарту ARZ', 'Куплю видеокарту "ASC". Бюджет: '},
+			{'Продам видеокарту ARZ поколение', 'Продам видеокарту "ASC" * поколения. Цена: '},
+			{'Куплю видеокарту ARZ поколение', 'Куплю видеокарту "ASC" * поколения. Бюджет: '},
+			{'Продам охлад BTC', 'Продам охлаждающую жидкость для видеокарты "BTC". Цена: '},
+			{'Куплю охлад BTC', 'Куплю охлаждающую жидкость для видеокарты "BTC". Бюджет: '},
+			{'Продам смазку BTC', 'Продам смазки для разгона видеокарты "BTC". Цена: '},
+			{'Куплю смазку BTC', 'Куплю смазки для разгона видеокарты "BTC". Бюджет: '},
+			{'Продам охлад для ARZ', 'Продам охлаждающую жидкость для видеокарты "ASC". Цена: '},
+			{'Куплю охлад для ARZ', 'Куплю охлаждающую жидкость для видеокарты "ASC". Бюджет: '},
+			{'Продам смазку для ARZ', 'Продам смазку для разгона видеокарты "ASC". Цена: '},
+			{'Куплю смазку для ARZ', 'Куплю смазку для разгона видеокарты "ASC". Бюджет: '}
 		},{'Аренда',
 			{'Сдам а/м', 'Сдам в аренду а/м *. Цена: '},
 			{'Сдам фуру', 'Сдам в аренду фуру *. Цена: '},
@@ -2566,19 +2608,22 @@ function loadVar()
 			{'Возьму самолет', 'Возьму в аренду самолет *. Бюджет: '},
 			{'Возьму а/с', 'Возьму в аренду а/с *. Бюджет: '},
 			{'Возьму лодку', 'Возьму в аренду лодку *. Бюджет: '}
-		},{'Разное (Az, EXP..)',
+		},{'Разное (Az, EXP.,Ларцы)',
 			{'Куплю AZ', 'Куплю талон "Предаваемые AZ-Coin". Бюджет: '},
 			{'Продам AZ', 'Продам талон "Предаваемые AZ-Coin". Цена: '},
 			{'Куплю сертификат', 'Куплю сертификат "". Бюджет: '},
 			{'Продам сертификат', 'Продам сертификат "". Цена: '},
 			{'Куплю EXP', 'Куплю талон "Передаваемые EXP". Бюджет: '},
-			{'Продам EXP', 'Продам талон "Передаваемые EXP". Цена: '}
+			{'Продам EXP', 'Продам талон "Передаваемые EXP". Цена: '},
+			{'Куплю ларцы', 'Куплю ларцы "". Бюджет: '},
+			{'Продам ларцы', 'Продам ларцы "". Цена: '}
 		}
 	}
 	nHelpEsterSet = {
 		{'name','duty','tagCNN','city','server','music'},
 		{'имя и фамилия', 'должность', 'тег в депортамент', 'город', 'имя штата', 'Музыкальная заставка'},
-		{'Keith Flint', 'Стажер', 'СМИ ЛВ', 'Лас-Вентурас', 'Юма', '<<< Музыкальная заставка радиостанции Prodigy News >>>'}
+		{'Keith Flint', 'Стажер', 'СМИ ЛВ', 'Лас-Вентурас', 'Юма', '<<< Музыкальная заставка радиостанции Prodigy News >>>'},
+		{'Ваше имя', 'Ваша должность', 'Тег в депортамент', 'Город вашей СМИ', 'Название вашего сервера', 'Музыкальная заставка'}
 	}
 	newsHelpEsters = {
 		['reset'] = 'bit',
@@ -2853,6 +2898,24 @@ function loadVar()
 				local intCh = txtIpt:find(txtMatch)
 				data:DeleteChars(intCh - 1, string.match(txtIpt:sub(intCh, intCh), '[^%w%p]') and 2 or 1)
 				data.CursorPos = intCh - (share and 0 or 1)
+			end
+			return 0
+		end),
+		bindtag = ffi.cast('int (*)(ImGuiInputTextCallbackData* data)', function(data)
+			local txtIpt = ffi.string(data.Buf)
+			local txtMatch = '[%c][%c]'
+			if txtIpt:match(txtMatch) then
+				local intCh = txtIpt:find(txtMatch)
+				if intCh > tmp.callBT or intCh == tmp.callBT then -- enter >; backspace <
+					data:InsertChars(intCh + 1, '/news \n')
+					data:DeleteChars(intCh, 1)
+					data.CursorPos = intCh + 6
+				else
+					data:DeleteChars(intCh, 1)
+				end
+			end
+			if tmp.callBT ~= data.CursorPos then
+				tmp.callBT = data.CursorPos
 			end
 			return 0
 		end)
