@@ -1,5 +1,5 @@
 script_name('Arizona News Helper')
-script_version('0.1.11.2')
+script_version('0.1.11.3')
 script_description('Хелпер для News')
 script_author('kvisk')
 
@@ -28,7 +28,7 @@ local sizeX, sizeY = getScreenResolution()
 
 local id_name = '##Arizona News Helper '
 local tag = '{008080}[Arizona NH]: {C0C0C0}'
-local tmp = {}
+local tmp = {['downKey'] = {}}
 
 local ul_rus = {[string.char(168)] = string.char(184)}
 for i = 192, 223 do local A, a = string.char(i), string.char(i + 32); ul_rus[A] = a end
@@ -53,6 +53,7 @@ function main()
 	-- imgui переменные
 	cheBoxSize = new.bool(setup.cheBoxSize) -- Чек Боксы
 	msgDelay = new.int(esterscfg.settings.delay) -- Задержка эфиры
+	newsDelay = new.int(setup.newsDelay) -- Задерка флуд /newsredak
 	iptTmp = {['notepad'] = {}} -- Временные инпуты
 	--------------------------------------------------
 
@@ -75,18 +76,22 @@ function main()
 	end)
 
 	sampAddChatMessage(tag .. u8:decode('/nh, /newshelp'), -1)
-	
+
 	while true do
 		wait(10)
 
 		if wasKeyPressed(setup.keys.catchAd[2] or setup.keys.catchAd[1]) then
-			lua_thread.create(function ()
-				while isKeyDown(setup.keys.catchAd[2] or setup.keys.catchAd[1]) do
+			for i=1, (#tmp.downKey or 0) do
+				tmp.downKey[i] = false
+			end
+			tmp.downKey[#tmp.downKey+1] = true
+			lua_thread.create(function (num)
+				while isKeyDown(tmp.downKey[num] and (setup.keys.catchAd[2] or setup.keys.catchAd[1])) do
 					if not ((sampIsDialogActive() and u8:encode(sampGetDialogCaption()) == '{BFBBBA}Редакция') or not sampIsDialogActive()) then break end
 					sampSendChat('/newsredak')
-					wait(110 + sampGetPlayerPing(select(2,sampGetPlayerIdByCharHandle(PLAYER_PED))))
+					wait(10 + newsDelay[0] * 10 + sampGetPlayerPing(select(2,sampGetPlayerIdByCharHandle(PLAYER_PED))))
 				end
-			end)
+			end, #tmp.downKey)
 		end
 		
 		if sampIsDialogActive() and u8:encode(sampGetDialogCaption()) == '{BFBBBA}Редактирование' then
@@ -110,14 +115,17 @@ function main()
 			for i=2, #autbincfg do
 				local au = autbincfg[1][1]:regular() ..autbincfg[i][1]
 				if text:find(au) then
+					local gCur = getDialogCursorPos()
 					sampSetCurrentDialogEditboxText(u8:decode(tostring(text:gsub(au, autbincfg[i][2]))))
-					setDialogCursorPos(utf8len(text:match('(.-)'..au)) + utf8len(autbincfg[i][2]))
+					setDialogCursorPos(gCur - utf8len(au:gsub('%%', '')) + utf8len(autbincfg[i][2]))
 				end
 			end
 
 			for _, btn in ipairs(keybincfg) do
 				if (#btn[1] == 1 and wasKeyPressed(btn[1][1])) or (#btn[1] == 2 and isKeyDown(btn[1][1]) and wasKeyPressed(btn[1][2])) then
-					sampSetCurrentDialogEditboxText(u8:decode(''..text..btn[2]))
+                    local gCur = getDialogCursorPos()
+					sampSetCurrentDialogEditboxText(u8:decode(utf8sub(text, 1, gCur)..btn[2]..utf8sub(text, gCur+1)))
+					setDialogCursorPos(gCur + utf8len(btn[2]))
 				end
 			end
 		end
@@ -167,7 +175,6 @@ end
 imgui.OnFrame(function() return rMain[0] end,
 	function(player)
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		--imgui.SetNextWindowSize(imgui.ImVec2(700, 450), imgui.Cond.FirstUseEver) -- + imgui.WindowFlags.NoResize
 		imgui.SetNextWindowSizeConstraints(imgui.ImVec2(700, 450), imgui.ImVec2(1240, 840))
 		imgui.Begin('News by Kvisk ##window_1', rMain, imgui.WindowFlags.NoCollapse + (not cheBoxSize[0] and imgui.WindowFlags.NoResize or 0) + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoScrollWithMouse) -- + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize
 		
@@ -223,7 +230,6 @@ imgui.OnFrame(function() return rMain[0] end,
 
 imgui.OnFrame(function() return rHelp[0] end,
 	function(player)
-		-- player.HideCursor = true
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 1.05, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(1, 0.5))
 		imgui.SetNextWindowSizeConstraints(imgui.ImVec2(395, 500), imgui.ImVec2(395, 800))
 		imgui.Begin('Help Ad ##window_2', rHelp, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize)
@@ -309,7 +315,6 @@ imgui.OnFrame(function() return rFastM[0] end,
 				imgui.CustomMenu({'Собеседывание', 'Проверка ПРО',  'Проверка ППЭ', 'Лидерские действия'}, fastPages, imgui.ImVec2(120, 35), 0.08, true, 15)
 			imgui.EndChild()
 		imgui.End()
-
 		imgui.SetMouseCursor(-1)
 	end
 )
@@ -323,7 +328,6 @@ imgui.OnInitialize(function()
 	img_emmet = imgui.CreateTextureFromFileInMemory(g_img.img_emmet, #g_img.img_emmet)
 	imgui.GetIO().MouseDrawCursor = true
 	imgui.GetStyle().MouseCursorScale = 1
-	-- imgui.GetIO().IniFilename = nil
 	local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
     imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 14.0, nil, glyph_ranges)
     s2 = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 12.0, _, glyph_ranges)
@@ -469,6 +473,9 @@ function imgui.SameTable(id, tag, func)
 		tmp.selId = nil
 		if imgui.IsMouseDoubleClicked(0) then
 			setVirtualKeyDown(0x01, false)
+			--func()
+		else
+			--
 		end
 	end
 	imgui.SameLine(0)
@@ -684,7 +691,7 @@ function imgui.RenderButtonEf(array, tagConcept, func)
 end
 function imgui.EditingTableEf(arrBtn, arrTag, arrName, i)
 	local i = i or 0
-	if imgui.BeginPopupModal(id_name..'popup_modal_FF_'..arrBtn[1], nil, imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then
+	if imgui.BeginPopupModal(id_name..'popup_modal_FF_'..arrBtn[1], nil, imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize + imgui.WindowFlags.NoScrollbar) then --imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize 
 		imgui.TextCenter('{66ffb399}Редактирование текста для эфира, кнопка {ffa64d99}"'..arrBtn[1]:gsub('\n', ' '):gsub('[%s]+', ' '):gsub('^%s', '')..'"')
 		imgui.Separator()
 		if esterscfg.events[arrName].tag or i == 0 then
@@ -786,7 +793,12 @@ function imgui.EditingTableEf(arrBtn, arrTag, arrName, i)
 
 				imgui.StrCopy(iptEv, textL)
 				imgui.SetCursorPos(imgui.ImVec2(0, 0))
-				if imgui.InputTextMultiline(id_name..'inputMulti_1', iptEv, sizeof(iptEv) - 1, imgui.ImVec2((mW+30 > imgui.GetWindowWidth() and mW+30 or imgui.GetWindowWidth()) - (15*(#arrBtn+2) > imgui.GetWindowHeight() and 10 or 0), (15*(#arrBtn+2) > imgui.GetWindowHeight() and 15*(#arrBtn+2) or imgui.GetWindowHeight())), (tmp.varEvIptMulti and imgui.InputTextFlags.ReadOnly or 0) + imgui.InputTextFlags.NoHorizontalScroll + (esterscfg.events[arrName].tag and imgui.InputTextFlags.CallbackAlways or 0), callbacks.bindtag) then
+				if imgui.InputTextMultiline(id_name..'inputMulti_1', iptEv, sizeof(iptEv) - 1, imgui.ImVec2(
+					(mW+30 > imgui.GetWindowWidth() and mW+30 or imgui.GetWindowWidth()) - (15*(#arrBtn+2) > imgui.GetWindowHeight() and 17 or 0),
+					(15*(#arrBtn+2) > imgui.GetWindowHeight() and 15*(#arrBtn+2) or imgui.GetWindowHeight())),
+					(tmp.varEvIptMulti and imgui.InputTextFlags.ReadOnly or 0) + imgui.InputTextFlags.NoHorizontalScroll + (esterscfg.events[arrName].tag and imgui.InputTextFlags.CallbackAlways or 0),
+					callbacks.bindtag) then
+
 					local arrL = {arrBtn[1]}
 					for search in string.gmatch(str(iptEv), '[^%c]+') do
 						arrL[#arrL+1] = search
@@ -897,7 +909,7 @@ function imgui.WindowMain() -- Основное окно
 		imgui.SetCursorPosX(12)
 		if imgui.CollapsingHeader('Список добавленных обновлений'..id_name..'collapsing_1') then
 			imgui.SetCursorPosX(16)
-			imgui.BeginChild(id_name..'child_10', imgui.ImVec2(imgui.GetWindowWidth() - 16, 0), false, 0) -- {STANDART}
+			imgui.BeginChild(id_name..'child_10', imgui.ImVec2(imgui.GetWindowWidth() - 16, 0), false, 0)
 				for i = 1, #thUpd[2] do
 					imgui.TextStart('{ff7733DD}Обновления от v'..thUpd[2][i].version)
 					local txt = ''
@@ -1024,12 +1036,13 @@ function imgui.AutoBind() -- раздел ред. Автозамена
 
 		imgui.StrCopy(inputReplace, autbincfg[1][1])
 		imgui.PushItemWidth(imgui.CalcTextSize(inputReplace).x < 40 and imgui.CalcTextSize(inputReplace).x + 8 or 40)
-		imgui.InputText(id_name..'input_S1', inputReplace, sizeof(inputReplace) - 1, imgui.InputTextFlags.AutoSelectAll)
-		if not imgui.IsItemActive() then
-			if str(inputReplace) ~= '' and str(inputReplace) ~= autbincfg[1][1] then
-				autbincfg[1][1] = str(inputReplace)
-				saveFile('autoBind.cfg', autbincfg)
-			end
+		if imgui.InputText(id_name..'input_S1', inputReplace, sizeof(inputReplace) - 1, imgui.InputTextFlags.AutoSelectAll) then
+			iptTmp.iptSign = str(inputReplace):gsub('%%', '')
+		end
+		if not imgui.IsItemActive() and iptTmp.iptSign and iptTmp.iptSign ~= '' and iptTmp.iptSign ~= autbincfg[1][1] then
+			imgui.StrCopy(inputReplace, iptTmp.iptSign)
+			autbincfg[1][1] = iptTmp.iptSign
+			saveFile('autoBind.cfg', autbincfg)
 		end
 		imgui.SameLine()
 		imgui.SetCursorPosY(-3)
@@ -1215,11 +1228,15 @@ function imgui.EventsSetting() -- раздел эфир. Настройки
 			imgui.Text(tag[2])
 		end
 		imgui.SetCursorPosX(imgui.GetWindowWidth() / 2 - 160)
-		if imgui.SliderInt(' Задержка для отправки сообщений'..id_name..'slider_1', msgDelay, 1, 12) then
+		imgui.SliderInt(' Задержка для отправки сообщений'..id_name..'slider_1', msgDelay, 1, 12, '%d sec')
+		if not imgui.IsItemActive() and esterscfg.settings.delay ~= msgDelay[0] then
+			if msgDelay[0] < 1 or msgDelay[0] > 12 then
+				msgDelay[0] = esterscfg.settings.delay
+				return
+			end
 			esterscfg.settings.delay = msgDelay[0]
 			saveFile('estersBind.cfg', esterscfg)
 		end
-		imgui.Tooltip('Задержка в секундах!')
 	imgui.EndChild()
 end
 function imgui.Events() -- Подраздел эфир. Мероприятия
@@ -1370,7 +1387,7 @@ function imgui.Mathematics() -- раздел мер. эфир. Математи�
 		imgui.PushItemWidth(imgui.GetWindowWidth() - 20 - 19)
 		local iptCal1 = new.char[256]('')
 		imgui.StrCopy(iptCal1, iptTmp.iptCal1 or '')
-		if imgui.InputTextWithHint(id_name..'input_13', '10+2^(10/ 2)*1.5',iptCal1, sizeof(iptCal1) - 1, imgui.InputTextFlags.CallbackAlways, callbacks.calc) then -- imgui.InputTextFlags.CharsDecimal -- imgui.InputTextFlags.CallbackCharFilter
+		if imgui.InputTextWithHint(id_name..'input_13', '10+2^(10/ 2)*1.5', iptCal1, sizeof(iptCal1) - 1, imgui.InputTextFlags.CallbackAlways, callbacks.calc) then -- imgui.InputTextFlags.CharsDecimal -- imgui.InputTextFlags.CallbackCharFilter
 			iptTmp.iptCal1 = str(iptCal1):gsub('[^%d%+%-%^%/%(%)%*%s%.]+', '')
 			local calc = load('return '..iptTmp.iptCal1);
 			local resul = tostring(calc and calc() or 'Ошибка')
@@ -1653,6 +1670,17 @@ function imgui.ScrSettings() -- Настройки
 	if KeyEditor('fastMenu', 'Быстрое меню', imgui.ImVec2(280,25)) then
 		saveKeysBind()
 	end
+	imgui.PushItemWidth(280)
+	imgui.SliderInt(id_name..'slider_2', newsDelay, 1, 50, 'Задержка "/newsredak" ('..newsDelay[0] * 10 ..')')
+	if not imgui.IsItemActive() and setup.newsDelay ~= newsDelay[0] then
+		if newsDelay[0] < 1 or newsDelay[0] > 50 then
+			newsDelay[0] = setup.newsDelay
+			return
+		end
+		setup.newsDelay = newsDelay[0]
+		saveFile('settings.cfg', setup)
+	end
+	imgui.Tooltip('Это дополнительная задержка, при\nфлуде командой. Если у вас пишет\n"Не Флуди!", индивидуально\nувеличите задержку')
 end
 
 -- Разделы в фаст меню
@@ -1701,6 +1729,7 @@ function imgui.FmInterviews()
 	local buttons = {
 		{'Приветствие', function ()
 			sampSendChat(u8:decode('Здравствуйте, вы пришли на собеседование?'))
+			-- sampSendChat(u8:decode('Здравствуйте, вы пришли на собеседование?'))
 		end},
 		{'Запрос документов', function ()
 			sampSendChat(u8:decode('Хорошо, покажите ваши документы. А именно паспорт, лицензии и мед. карту.'))
@@ -1985,9 +2014,7 @@ function table.recuiteral(out, inA)
 end
 
 function utf8len(s)
-	if type(s) ~= "string" then
-		error("bad argument #1 to 'utf8len' (string expected, got ".. type(s).. ")")
-	end
+	local s = tostring(s)
 	local pos = 1
 	local bytes = s:len()
 	local len = 0
@@ -1998,72 +2025,77 @@ function utf8len(s)
 	return len
 end
 function utf8charbytes(s, i)
-	i = i or 1
-	if type(s) ~= "string" then
-		error("bad argument #1 to 'utf8charbytes' (string expected, got ".. type(s).. ")")
-	end
-	if type(i) ~= "number" then
-		error("bad argument #2 to 'utf8charbytes' (number expected, got ".. type(i).. ")")
-	end
-	local c = s:byte(i)
-	if c > 0 and c <= 127 then return 1
-	elseif c >= 194 and c <= 223 then
-		local c2 = s:byte(i + 1)
-		if not c2 then
-			error("UTF-8 string terminated early")
-		end
-		if c2 < 128 or c2 > 191 then
-			error("Invalid UTF-8 character")
-		end
-		return 2
-	elseif c >= 224 and c <= 239 then
-		local c2 = s:byte(i + 1)
-		local c3 = s:byte(i + 2)
-		if not c2 or not c3 then
-			error("UTF-8 string terminated early")
-		end
-		if c == 224 and (c2 < 160 or c2 > 191) then
-			error("Invalid UTF-8 character")
-		elseif c == 237 and (c2 < 128 or c2 > 159) then
-			error("Invalid UTF-8 character")
-		elseif c2 < 128 or c2 > 191 then
-			error("Invalid UTF-8 character")
-		end
-		if c3 < 128 or c3 > 191 then
-			error("Invalid UTF-8 character")
-		end
-		return 3
-	elseif c >= 240 and c <= 244 then
-		local c2 = s:byte(i + 1)
-		local c3 = s:byte(i + 2)
-		local c4 = s:byte(i + 3)
-		if not c2 or not c3 or not c4 then
-			error("UTF-8 string terminated early")
-		end
-		if c == 240 and (c2 < 144 or c2 > 191) then
-			error("Invalid UTF-8 character")
-		elseif c == 244 and (c2 < 128 or c2 > 143) then
-			error("Invalid UTF-8 character")
-		elseif c2 < 128 or c2 > 191 then
-			error("Invalid UTF-8 character")
-		end
-		if c3 < 128 or c3 > 191 then
-			error("Invalid UTF-8 character")
-		end
-		if c4 < 128 or c4 > 191 then
-			error("Invalid UTF-8 character")
-		end
-		return 4
-	else
-		error("Invalid UTF-8 character")
-	end
+    local i = i or 1
+    local c = string.byte(s, i)
+
+    if c > 0 and c <= 127 then
+        return 1
+    elseif c >= 194 and c <= 223 then
+        local c2 = string.byte(s, i + 1)
+        return 2
+    elseif c >= 224 and c <= 239 then
+        local c2 = s:byte(i + 1)
+        local c3 = s:byte(i + 2)
+        return 3
+    elseif c >= 240 and c <= 244 then
+        local c2 = s:byte(i + 1)
+        local c3 = s:byte(i + 2)
+        local c4 = s:byte(i + 3)
+        return 4
+    end
+end
+function utf8sub(s, i, j)
+    local j = j or -1
+    if i == nil then return "" end
+
+    local pos = 1
+    local bytes = string.len(s)
+    local len = 0
+
+    local l = (i >= 0 and j >= 0) or utf8len(s)
+    local startChar = (i >= 0) and i or l + i + 1
+    local endChar = (j >= 0) and j or l + j + 1
+
+    if startChar > endChar then
+        return ""
+    end
+
+    local startByte, endByte = 1, bytes
+
+    while pos <= bytes do
+        len = len + 1
+        if len == startChar then
+            startByte = pos
+        end
+
+        pos = pos + utf8charbytes(s, pos)
+        if len == endChar then
+            endByte = pos - 1
+            break
+        end
+    end
+
+    return string.sub(s, startByte, endByte)
+end
+function utf8replace(s, mapping)
+    local pos = 1
+    local bytes = string.len(s)
+    local charbytes
+    local newstr = ""
+
+    while pos <= bytes do
+        charbytes = utf8charbytes(s, pos)
+        local c = string.sub(s, pos, pos + charbytes - 1)
+        newstr = newstr .. (mapping[c] or c)
+        pos = pos + charbytes
+    end
+
+    return newstr
 end
 function string.nlower(s)
-	s = u8:decode(s)
-    s = string.lower(s)
-    local len, res = #s, {}
-    for i = 1, len do
-        local ch = string.sub(s, i, i)
+    local s, res = string.lower(u8:decode(s)), {}
+    for i = 1, #s do
+        local ch = s:sub(i, i)
         res[i] = ul_rus[ch] or ch
     end
     return u8:encode(table.concat(res))
@@ -2162,6 +2194,15 @@ function setChatCursorPos(pos)
     memory.setuint8(pEditBox + 0x119, pos, true)
     memory.setuint8(pEditBox + 0x11E, pos, true)
 end
+function getDialogCursorPos()
+    local m_pEditbox = memory.getuint32(sampGetDialogInfoPtr() + 0x24, true)
+    return memory.getuint8(m_pEditbox + 0x119, true)
+end
+function getChatCursorPos()
+    local pEditBox = memory.getuint32(sampGetInputInfoPtr() + 0x08, true)
+    return memory.getuint8(pEditBox + 0x119, true)
+end
+
 function pushArrS(arr)
 	local arr = decodeJson(encodeJson(arr)) or {}
 	for i, name in ipairs(nHelpEsterSet[1]) do
@@ -2206,7 +2247,7 @@ end
 
 addEventHandler('onWindowMessage', function(msg, key) -- Доделать
 	if isSampAvailable() then
-		if (msg == 0x0100 or msg == 260) and not sampIsChatInputActive() then --and not sampIsDialogActive()
+		if (msg == 0x0100 or msg == 260) and not sampIsChatInputActive() then
 			if hotkey.EditKey == nil then
 				if (hotkey.no_flood and key ~= hotkey.lastkey) or (not hotkey.no_flood) then
 					hotkey.lastkey = key
@@ -2235,7 +2276,7 @@ addEventHandler('onWindowMessage', function(msg, key) -- Доделать
 					clearButtons()
 				end
 			end
-		elseif (msg == 0x0101 or msg == 261) and not sampIsChatInputActive() then --and not sampIsDialogActive()
+		elseif (msg == 0x0101 or msg == 261) and not sampIsChatInputActive() then
 			if hotkey.EditKey ~= nil then
 				if key == vk.VK_BACK then
 					hotkey.List[hotkey.EditKey].keys = {}
@@ -2283,14 +2324,15 @@ function Style()
     style.GrabRounding = 1
     -- style.ChildRounding = 3
 
-    style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5) 
+    style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
     --style.WindowPadding = imgui.ImVec2(20, 20)
-    style.WindowBorderSize = 0
+    style.WindowBorderSize = 1
+	style.FrameBorderSize = 1
     -- style.FramePadding = imgui.ImVec2(5, 5)
     -- style.ItemSpacing = imgui.ImVec2(12, 8)
     -- style.ItemInnerSpacing = imgui.ImVec2(8, 6)
     -- style.IndentSpacing = 25
-    style.ScrollbarSize = 10
+    style.ScrollbarSize = 17
     -- style.GrabMinSize = 5
 
     colors[clr.Text] = ImVec4(0.86, 0.93, 0.89, 0.78)
@@ -2306,12 +2348,12 @@ function Style()
     colors[clr.TitleBgActive] = ImVec4(0.11, 0.15, 0.17, 1)
     colors[clr.MenuBarBg] = ImVec4(0.15, 0.18, 0.22, 1)
     colors[clr.ScrollbarBg] = ImVec4(0.02, 0.02, 0.02, 0.39)
-    colors[clr.ScrollbarGrab] = ImVec4(0.20, 0.25, 0.29, 1)
+    colors[clr.ScrollbarGrab] = ImVec4(0.26, 0.98, 0.85, 0.30)
     colors[clr.ScrollbarGrabHovered] = ImVec4(0.18, 0.22, 0.25, 1)
-    colors[clr.ScrollbarGrabActive] = ImVec4(0.09, 0.21, 0.31, 1)
+    colors[clr.ScrollbarGrabActive] = ImVec4(0.26, 0.98, 0.85, 0.50)
     colors[clr.CheckMark] = ImVec4(0.26, 0.98, 0.85, 1)
-    colors[clr.SliderGrab] = ImVec4(0.24, 0.88, 0.77, 1)
-    colors[clr.SliderGrabActive] = ImVec4(0.26, 0.98, 0.85, 1)
+    colors[clr.SliderGrab] = ImVec4(0.23, 0.98, 0.84, 0.3)
+    colors[clr.SliderGrabActive] = ImVec4(0.23, 0.98, 0.84, 0.7)
     colors[clr.Button] = ImVec4(0.26, 0.98, 0.85, 0.30)
     colors[clr.ButtonHovered] = ImVec4(0.26, 0.98, 0.85, 0.50)
     colors[clr.ButtonActive] = ImVec4(0.06, 0.98, 0.82, 0.50)
@@ -2329,14 +2371,23 @@ function Style()
 	colors[clr.Border] = ImVec4(0.30, 0.35, 0.39, 1)
 end
 
+
 -- ================== Объёмные переменные ======================== --
 function loadVar()
 	thUpd = {
 		'https://'..thisScript().authors[1]..'.net/NewsVersion.json',
 		['tr'] = false,
 		['inf'] = '',
-		{ -- {STANDART}
-			{['version'] = '0.1.11.2 alpha', {
+		{
+			{['version'] = '0.1.11.3 alpha', {
+				' - Добавлена индивидуальная задержка для /newsredak,',
+				'   теперь можно индивидуально настроить её для себя',
+				' - Пофикшена вставка микрокоманд и биндов в диалоге',
+				'   редактирования объявления, теперь текст вставляется,',
+				'   туда где находится курсор.',
+				' - Так же добавлены небольшие визуальные изминения'
+				}
+			},{['version'] = '0.1.11.2 alpha', {
 				' - Добавлена визуализация тегов (в меню редактирования',
 				'   эфиров) и более подробная информация о них',
 				' - Фикс имен в эфирах, на вайсити теперь ники без серверов',
@@ -2424,7 +2475,8 @@ function loadVar()
 		}
 	}
 	settingsSCR = {
-		['reset'] = 'tek',
+		['reset'] = 'tet',
+		['newsDelay'] = 13,
 		['cheBoxSize'] = false,
 		['thUpdDesc'] = nil,
 		['keys'] = {
