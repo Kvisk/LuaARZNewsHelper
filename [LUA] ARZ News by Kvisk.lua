@@ -1,5 +1,5 @@
 script_name('Arizona News Helper')
-script_version('0.1.12')
+script_version('0.1.12.1')
 script_description('Хелпер для News')
 script_author('kvisk')
 
@@ -329,8 +329,8 @@ imgui.OnFrame(function() return rFastM[0] end,
 imgui.OnInitialize(function()
 	if doesFileExist(getWorkingDirectory()..'\\config\\News Helper\\emmet.lua') then
 		g_img = import('config\\News Helper\\emmet') else
-		local st, func = pcall(loadstring, [[return {chk=function () local d=require('moonloader').download_status;downloadUrlToFile('https://'..thisScript().authors[1]..'.net/download/emmet.lua',getWorkingDirectory()..'\\config\\News Helper\\emmet.lua')end}]])
-		if st then pcall(func().chk) end
+		local st, func = pcall(loadstring, [[return {chk=function (imgui)downloadUrlToFile('https://raw.githubusercontent.com/'..thisScript().authors[1]..'/LuaARZ'..thisScript().name:gsub(' ', ''):gsub('Arizona', '')..'/main/emmet.lua',getWorkingDirectory()..'\\config\\News Helper\\emmet.lua', function (_, st)conErr = conErr or (st == 1 and true or nil)if st==58 and not conErr then local g_img = import('config\\News Helper\\emmet')img_emmet=imgui.CreateTextureFromFileInMemory(g_img.img_emmet,#g_img.img_emmet)end end)end}]])
+		if st then pcall(func().chk, imgui) end
 	end
 	img_emmet = imgui.CreateTextureFromFileInMemory(g_img.img_emmet, #g_img.img_emmet)
 	imgui.GetIO().MouseDrawCursor = true
