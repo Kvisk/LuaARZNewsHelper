@@ -15,7 +15,7 @@ encoding.default = 'CP1251'
 local u8 = encoding.UTF8
 
 local rMain, rHelp, rSW, rFastM = new.bool(), new.bool(), new.bool(), new.bool()  -- Основа
--- Инпуты 
+-- Инпуты --
 local inputDec = new.char[8192]() -- связь
 local inputAd, inputAdText, inputReplace, iptBind  = new.char[256](), new.char[256](), new.char[128](), new.char[128]() -- объявления
 local iptEv, inputEvSet, iptNotepad = new.char[8192](), new.char[256](), new.char[4096]() -- мероприятия
