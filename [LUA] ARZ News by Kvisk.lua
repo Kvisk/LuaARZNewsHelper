@@ -1,5 +1,5 @@
 script_name('Arizona News Helper')
-script_version('0.1.12.2')
+script_version('0.1.12.3')
 script_description('Хелпер для News')
 script_author('kvisk')
 
@@ -1159,7 +1159,7 @@ function imgui.AutoBindButton() -- раздел ред. Быстрые клав�
 				hotkey.List['bindCfg_'..i] = hotkey.List['bindCfg_'..i] or {['keys'] = btn[1], ['callback'] = nil}
 				if KeyEditor('bindCfg_'..i, nil, imgui.ImVec2(80,20)) then
 					keybincfg[i][1] = hotkey.List['bindCfg_'..i].keys
-					saveFile('keyBind.cfg', newsKeyBind)
+					saveFile('keyBind.cfg', keybincfg)
 				end
 
 				imgui.SameLine(0)
@@ -1168,14 +1168,14 @@ function imgui.AutoBindButton() -- раздел ред. Быстрые клав�
 				imgui.InputText(id_name..'input_BindB_'..i, iptBind, sizeof(iptBind) - 1)
 				if not imgui.IsItemActive() and btn[2] and btn[2] ~= str(iptBind) then
 					keybincfg[i][2] = str(iptBind)
-					saveFile('keyBind.cfg', newsKeyBind)
+					saveFile('keyBind.cfg', keybincfg)
 				end
 
 				imgui.SameLine()
 				if imgui.Button('Х'..id_name..'button_Sb_'..i, imgui.ImVec2(20,20)) then
 					table.remove(keybincfg, i)
 					clearButtons()
-					saveFile('keyBind.cfg', newsKeyBind)
+					saveFile('keyBind.cfg', keybincfg)
 					break
 				end
 				imgui.Tooltip('Удалить')
@@ -2749,7 +2749,7 @@ function loadVar()
 		['tr'] = false,
 		['inf'] = '',
 		{
-			{['version'] = '0.1.12.2 alpha', {
+			{['version'] = '0.1.12.3 alpha', {
 				' - Испправлен баг, быстрые клавиши не сохранялись после редактирования'
 				}
 			},{['version'] = '0.1.12 alpha', {
