@@ -1,5 +1,5 @@
 script_name('Arizona News Helper')
-script_version('0.1.12.1')
+script_version('0.1.12.2')
 script_description('Хелпер для News')
 script_author('kvisk')
 
@@ -15,7 +15,7 @@ encoding.default = 'CP1251'
 local u8 = encoding.UTF8
 
 local rMain, rHelp, rSW, rFastM = new.bool(), new.bool(), new.bool(), new.bool()  -- Основа
--- Инпуты --
+-- Инпуты 
 local inputDec = new.char[8192]() -- связь
 local inputAd, inputAdText, inputReplace, iptBind  = new.char[256](), new.char[256](), new.char[128](), new.char[128]() -- объявления
 local iptEv, inputEvSet, iptNotepad = new.char[8192](), new.char[256](), new.char[4096]() -- мероприятия
@@ -180,7 +180,6 @@ end
 imgui.OnFrame(function() return rMain[0] end,
 	function(player)
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 2, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(0.5, 0.5))
-		--imgui.SetNextWindowSize(imgui.ImVec2(700, 450), imgui.Cond.FirstUseEver) -- + imgui.WindowFlags.NoResize
 		imgui.SetNextWindowSizeConstraints(imgui.ImVec2(700, 450), imgui.ImVec2(1240, 840))
 		imgui.Begin('News by Kvisk ##window_1', rMain, imgui.WindowFlags.NoCollapse + (not cheBoxSize[0] and imgui.WindowFlags.NoResize or 0) + imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoScrollWithMouse) -- + imgui.WindowFlags.NoMove + imgui.WindowFlags.AlwaysAutoResize
 		
@@ -236,7 +235,6 @@ imgui.OnFrame(function() return rMain[0] end,
 
 imgui.OnFrame(function() return rHelp[0] end,
 	function(player)
-		-- player.HideCursor = true
 		imgui.SetNextWindowPos(imgui.ImVec2(sizeX / 1.05, sizeY / 2), imgui.Cond.FirstUseEver, imgui.ImVec2(1, 0.5))
 		imgui.SetNextWindowSizeConstraints(imgui.ImVec2(395, 500), imgui.ImVec2(395, 800))
 		imgui.Begin('Help Ad ##window_2', rHelp, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar + imgui.WindowFlags.NoResize + imgui.WindowFlags.AlwaysAutoResize)
@@ -257,7 +255,7 @@ imgui.OnFrame(function() return rHelp[0] end,
 							else
 								sampSetCurrentDialogEditboxText(u8:decode(helbincfg[i][f][2]))
 								if helbincfg[i][f][2]:find('""') then setDialogCursorPos(utf8len(helbincfg[i][f][2]:match('(.-)""')) + 1) end
-							end
+							end 
 						end
 						imgui.Tooltip(helbincfg[i][f][2])
 					end
@@ -335,7 +333,6 @@ imgui.OnInitialize(function()
 	img_emmet = imgui.CreateTextureFromFileInMemory(g_img.img_emmet, #g_img.img_emmet)
 	imgui.GetIO().MouseDrawCursor = true
 	imgui.GetStyle().MouseCursorScale = 1
-	-- imgui.GetIO().IniFilename = nil
 	local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesCyrillic()
     imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 14.0, nil, glyph_ranges)
     s2 = imgui.GetIO().Fonts:AddFontFromFileTTF(getFolderPath(0x14) .. '\\trebucbd.ttf', 12.0, _, glyph_ranges)
@@ -1148,7 +1145,7 @@ function imgui.AutoBindButton() -- раздел ред. Быстрые клав�
 				table.insert(keybincfg, {hotkey.List['addNewBtn'].keys, iptTmp.iptBind})
 				iptTmp.iptBind = nil
 				hotkey.List['addNewBtn'].keys = {}
-				saveFile('keyBind.cfg', newsKeyBind)
+				saveFile('keyBind.cfg', keybincfg)
 			end
 		end
 		imgui.Tooltip('Добавить новый биндер\n\n*Поля не должны быть пустыми')
@@ -2279,7 +2276,6 @@ function imgui.limit(v, min, max)
 	max = max or 1.0
 	return v < min and min or (v > max and max or v)
 end
-
 function updateFile(filename, default)
 	local cfg = loadFile(filename, default)
 	if default.reset ~= cfg.reset then 
@@ -2332,7 +2328,7 @@ function table.key_to_str(k)
 	end
 	return "[" .. table.val_to_str(k) .. "]"
 end
-function table.val_to_str(v, st)
+function table.val_to_str(v)
 	if "string" == type(v) then
 		v = string.gsub(v, "\\", "\\\\")
 		v = string.gsub(v, "\n", "\\n")
@@ -2655,7 +2651,7 @@ addEventHandler('onWindowMessage', function(msg, key) -- Доделать
 					clearButtons()
 				end
 			end
-		elseif (msg == 0x0101 or msg == 261) and not sampIsChatInputActive() then --and not sampIsDialogActive()
+		elseif (msg == 0x0101 or msg == 261) and not sampIsChatInputActive() then
 			if hotkey.EditKey ~= nil then
 				if key == vk.VK_BACK then
 					hotkey.List[hotkey.EditKey].keys = {}
@@ -2701,23 +2697,15 @@ function Style()
     style.FrameRounding = 3
     style.ScrollbarRounding = 3
     style.GrabRounding = 1
-    -- style.ChildRounding = 3
 
     style.WindowTitleAlign = imgui.ImVec2(0.5, 0.5)
-    --style.WindowPadding = imgui.ImVec2(20, 20)
     style.WindowBorderSize = 1
 	style.FrameBorderSize = 1
-    -- style.FramePadding = imgui.ImVec2(5, 5)
-    -- style.ItemSpacing = imgui.ImVec2(12, 8)
-    -- style.ItemInnerSpacing = imgui.ImVec2(8, 6)
-    -- style.IndentSpacing = 25
     style.ScrollbarSize = 17
-    -- style.GrabMinSize = 5
 
     colors[clr.Text] = ImVec4(0.86, 0.93, 0.89, 0.78)
     colors[clr.TextDisabled] = ImVec4(0.36, 0.42, 0.47, 1)
     colors[clr.WindowBg] =  ImVec4(0.11, 0.15, 0.17, 1)
-    --colors[clr.ChildBg] =  ImVec4(0.15, 0.18, 0.22, 1)
     colors[clr.PopupBg] = ImVec4(0.08, 0.08, 0.08, 0.94)
     colors[clr.FrameBg] = ImVec4(0.20, 0.25, 0.29, 1)
     colors[clr.FrameBgHovered] = ImVec4(0.12, 0.20, 0.28, 1)
@@ -2725,7 +2713,7 @@ function Style()
 	colors[clr.Tab] = ImVec4(0.26, 0.98, 0.85, 0.30)
 	colors[clr.TabHovered] = ImVec4(0.26, 0.98, 0.85, 0.50)
 	colors[clr.TabActive] = ImVec4(0.26, 0.98, 0.85, 0.50)
-    colors[clr.TitleBg] = ImVec4(0.11, 0.15, 0.17, 1) -- 0.04, 0.04, 0.04, 1
+    colors[clr.TitleBg] = ImVec4(0.11, 0.15, 0.17, 1)
     colors[clr.TitleBgCollapsed] = ImVec4(0.00, 0.00, 0.00, 0.51)
     colors[clr.TitleBgActive] = ImVec4(0.11, 0.15, 0.17, 1)
     colors[clr.MenuBarBg] = ImVec4(0.15, 0.18, 0.22, 1)
@@ -2761,12 +2749,15 @@ function loadVar()
 		['tr'] = false,
 		['inf'] = '',
 		{
-			{['version'] = '0.1.12 alpha', {
+			{['version'] = '0.1.12.2 alpha', {
+				' - Испправлен баг, быстрые клавиши не сохранялись после редактирования'
+				}
+			},{['version'] = '0.1.12 alpha', {
 				' - Исправлен баг, когда в эфире "Прятки" не работала ключевая фраза',
 				' - Добавлено несколько новых эфиров:',
-			   	'   Переводчик (есть возможность переводить свои слова)',
-			   	'   Зеркало (есть возможность переворачивать свои слова)',
-			   	'   Столицы (есть заготовки)',
+				'   Переводчик (есть возможность переводить свои слова)',
+				'   Зеркало (есть возможность переворачивать свои слова)',
+				'   Столицы (есть заготовки)',
 				' - Теперь в меню редактирования эфиров, при переходе в режим "Проверки",',
 				'   замененый текст тэгов будет также подсвечиваться зеленым',
 				' - Изменен вид конфигов, теперь в них можно хоть что-то разобрать'
@@ -2802,8 +2793,6 @@ function loadVar()
 				}
 			},{['version'] = '0.1.10 alpha', {
 				' - Добавлены первые несколько эфиров и приколы к ним',
-				--' - Очень много внутренних исправлений и доработак,',
-				--'   добавленны callback обработчики для полей ввода',
 				' - Теперь при добавлении новых кнопок или дополнительных',
 				'   эфиров, у вас не будут сбрасываться ваши настройки',
 				' - Далее будет добавлена заменяющее окно для диалога',
@@ -3378,7 +3367,7 @@ function loadVar()
 					'/news {tag}Приветствую вас, дорогие слушатели штата {server}.',
 					'/news {tag}У микрофона {duty} СМИ г. {city}',
 					'/news {tag}{name}!',
-					'/news {tag}Сейчас пройдет прямой эфир на тему "Математика".',
+					'/news {tag}Сейчас пройдет прямой эфир на тему "Переводчики".',
 					'/news {tag}Просьба отложить все дела и поучаствовать!',
 					'/news {tag}Я говорю слово на {language}ом языке, а вы должны написать ответ.',
 					'/news {tag}Проверим ваши знания данного языка, это не самая простая задача...',
@@ -3389,7 +3378,7 @@ function loadVar()
 					'/news {tag}Доставайте свои телефоны, открывайте контакты и «Написать в СМИ»,',
 					'/news {tag}Главное, выбирайте радиостанцию г. {city} и отправляйте свой ответ.',
 					'/news {tag}Ну что ж, давайте начинать!'
-				}, {'Следующий пример',
+				}, {'Следующее слово',
 					'/news {tag}Следующий слово такое ...'
 				}, {'Стоп!',
 					'/news {tag}Стоп! Стоп! Стоп!'
