@@ -1,5 +1,5 @@
 script_name('Arizona News Helper')
-script_version('0.1.12.3')
+script_version('0.1.13')
 script_description('Хелпер для News')
 script_author('kvisk')
 
@@ -13,6 +13,9 @@ local new, str, sizeof = imgui.new, ffi.string, ffi.sizeof
 local encoding = require 'encoding'
 encoding.default = 'CP1251'
 local u8 = encoding.UTF8
+
+-- Для фикса
+local sampModule = getModuleHandle('samp.dll')
 
 local rMain, rHelp, rSW, rFastM = new.bool(), new.bool(), new.bool(), new.bool()  -- Основа
 -- Инпуты 
@@ -101,18 +104,18 @@ function main()
 		
 		if sampIsDialogActive() and u8:encode(sampGetDialogCaption()) == '{BFBBBA}Редактирование' then
 			if tAd[1] == nil then ------ Переделать
-				sampSetCurrentDialogEditboxText(u8:decode(tAd[2]))
+				sampSetCurrentDialogEditboxTextFix(u8:decode(tAd[2]))
 				tAd[1] = false
 			end
 			if tAd[3] == true then
-				sampSetCurrentDialogEditboxText('')
+				sampSetCurrentDialogEditboxTextFix('')
 				tAd[3] = false
 			end -----
 
 			if wasKeyPressed(setup.keys.copyAd[2] or setup.keys.copyAd[1]) then
 				if u8:encode(sampGetDialogText()):find('Сообщение:%s+{33AA33}.+\n\n') then
 					local textdown = u8:encode(sampGetDialogText()):match('Сообщение:%s+{33AA33}(.+)\n\n')
-					sampSetCurrentDialogEditboxText(u8:decode(textdown))
+					sampSetCurrentDialogEditboxTextFix(u8:decode(textdown))
 				end
 			end
 
@@ -121,7 +124,7 @@ function main()
 				local au = autbincfg[1][1]:regular() ..autbincfg[i][1]
 				if text:find(au) then
 					local gCur = getDialogCursorPos()
-					sampSetCurrentDialogEditboxText(u8:decode(tostring(text:gsub(au, autbincfg[i][2]))))
+					sampSetCurrentDialogEditboxTextFix(u8:decode(tostring(text:gsub(au, autbincfg[i][2]))))
 					setDialogCursorPos(gCur - utf8len(au:gsub('%%', '')) + utf8len(autbincfg[i][2]))
 				end
 			end
@@ -129,7 +132,7 @@ function main()
 			for _, btn in ipairs(keybincfg) do
 				if (#btn[1] == 1 and wasKeyPressed(btn[1][1])) or (#btn[1] == 2 and isKeyDown(btn[1][1]) and wasKeyPressed(btn[1][2])) then
                     local gCur = getDialogCursorPos()
-					sampSetCurrentDialogEditboxText(u8:decode(utf8sub(text, 1, gCur)..btn[2]..utf8sub(text, gCur+1)))
+					sampSetCurrentDialogEditboxTextFix(u8:decode(utf8sub(text, 1, gCur)..btn[2]..utf8sub(text, gCur+1)))
 					setDialogCursorPos(gCur + utf8len(btn[2]))
 				end
 			end
@@ -250,10 +253,10 @@ imgui.OnFrame(function() return rHelp[0] end,
 						else tSize = TextSize+10 end
 						if imgui.Button(helbincfg[i][f][1]..'##if'..i..f, imgui.ImVec2(TextSize, 20)) then
 							if helbincfg[i][f][2]:find('*') then
-								sampSetCurrentDialogEditboxText(u8:decode(tostring(helbincfg[i][f][2]:gsub('*', ''))))
+								sampSetCurrentDialogEditboxTextFix(u8:decode(tostring(helbincfg[i][f][2]:gsub('*', ''))))
 								setDialogCursorPos(utf8len(helbincfg[i][f][2]:match('(.-)*')))
 							else
-								sampSetCurrentDialogEditboxText(u8:decode(helbincfg[i][f][2]))
+								sampSetCurrentDialogEditboxTextFix(u8:decode(helbincfg[i][f][2]))
 								if helbincfg[i][f][2]:find('""') then setDialogCursorPos(utf8len(helbincfg[i][f][2]:match('(.-)""')) + 1) end
 							end 
 						end
@@ -2559,6 +2562,17 @@ function clearButtons()
 	end
 end
 
+function sampSetCurrentDialogEditboxTextFix(txt) -- Временный фикс
+	local txt = tostring(txt)
+	
+	local sampGetDialogInfoPtr = memory.getuint32(sampModule + 0x26E898)
+	local pEditBox = memory.getuint32(sampGetDialogInfoPtr + 0x24)
+	local IsActive = memory.getint8(sampGetDialogInfoPtr + 0x28)
+	if IsActive then
+        setEditboxText = ffi.cast('void(__thiscall *)(uintptr_t this, char* text, int i)', sampModule + 0x84E70)
+        setEditboxText(pEditBox, ffi.cast('char*', txt), 0)
+    end
+end
 function setDialogCursorPos(pos)
     local m_pEditbox = memory.getuint32(sampGetDialogInfoPtr() + 0x24, true)
     memory.setuint8(m_pEditbox + 0x119, pos, true)
@@ -2749,8 +2763,11 @@ function loadVar()
 		['tr'] = false,
 		['inf'] = '',
 		{
-			{['version'] = '0.1.12.3 alpha', {
-				' - Испправлен баг, быстрые клавиши не сохранялись после редактирования'
+			{['version'] = '0.1.13 alpha', {
+				' - Исправлена работа скрипта, после 10-летнего обновления АРЗ'
+				}
+			},{['version'] = '0.1.12.3 alpha', {
+				' - Исправлен баг, быстрые клавиши не сохранялись после редактирования'
 				}
 			},{['version'] = '0.1.12 alpha', {
 				' - Исправлен баг, когда в эфире "Прятки" не работала ключевая фраза',
