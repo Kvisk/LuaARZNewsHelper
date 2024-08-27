@@ -1,9 +1,9 @@
 {
-    "version": "0.1.12.3",
+    "version": "0.1.13",
     "updateurl": "https://raw.githubusercontent.com/Kvisk/LuaARZNewsHelper/main/[LUA] ARZ News by Kvisk.lua",
     "telemetry": "https://kvisk.net/news",
     "description": {
         "heading": "Небольшие дороботки и справления",
-        "line": " - Испправлен баг, быстрые клавиши не сохранялись после редактирования"
+        "line": " - Исправлена работа скрипта, после 10-летнего обновления АРЗ"
     }
 }
